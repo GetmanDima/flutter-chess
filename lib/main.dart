@@ -1,84 +1,130 @@
-/// Flutter code sample for Draggable
-
-// The following example has a [Draggable] widget along with a [DragTarget]
-// in a row demonstrating an incremented `acceptedData` integer value when
-// you drag the element to the target.
-
 import 'package:flutter/material.dart';
+import 'package:flutter_chess/desk.dart';
+import 'package:flutter_svg/svg.dart';
 
-void main() => runApp(const MyApp());
+import 'figure.dart';
+
+String _title = 'Flutter Chess';
+
+void main() => runApp(const ChessApp());
 
 /// This is the main application widget.
-class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
-
-  static const String _title = 'Flutter Code Sample';
+class ChessApp extends StatelessWidget {
+  const ChessApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: _title,
       home: Scaffold(
-        appBar: AppBar(title: const Text(_title)),
-        body: const MyStatefulWidget(),
+        appBar: AppBar(title: Text(_title)),
+        body: const BoardWidget(),
       ),
     );
   }
 }
 
-/// This is the stateful widget that the main application instantiates.
-class MyStatefulWidget extends StatefulWidget {
-  const MyStatefulWidget({Key? key}) : super(key: key);
+class BoardWidget extends StatefulWidget {
+  const BoardWidget({Key? key}) : super(key: key);
 
   @override
-  State<MyStatefulWidget> createState() => _MyStatefulWidgetState();
-
-
+  State<BoardWidget> createState() => _BoardWidgetState();
 }
 
-/// This is the private State class that goes with MyStatefulWidget.
-class _MyStatefulWidgetState extends State<MyStatefulWidget> {
+class _BoardWidgetState extends State<BoardWidget> {
+  List <TableRow> board = [];
+
+  void setBoard() {
+    board = [];
+
+    for (int x = 0; x < 8; x++) {
+      List<Widget>? row = [];
+
+      for (int y = 0; y < 8; y++) {
+        var figure = Desk.position[x][y];
+
+        row.add(squareWidget(context, x, y, figure));
+      }
+
+      board.add(TableRow(children: row));
+    }
+  }
+
+  @override
+  void initState() {
+    Desk.initialize();
+    setBoard();
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
-    List<TableRow> desk = [];
-
-    for (int i = 0; i < 8; i++) {
-      List<Widget>? row = [];
-
-      for (int j = 0; j < 8; j++) {
-        row.add(myWidget(context));
-      }
-      desk.add(TableRow(children: row));
-    }
-
-    return Table(children: desk);
+    return Center(
+      child: Container(
+          child: Padding(child: Table(children: board), padding: const EdgeInsets.fromLTRB(17, 16, 14, 15)),
+          width: 360,
+          height: 360,
+          decoration: const BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage('assets/desk3.png'),
+              fit: BoxFit.cover,
+            ),
+          )
+      )
+    );
   }
 
-
-  Widget myWidget(BuildContext context) {
-    return DragTarget<int>(
+  Widget squareWidget(BuildContext context, int row, int col, Figure? figure) {
+    return DragTarget<Figure>(
       builder: (
           BuildContext context,
           List<dynamic> accepted,
           List<dynamic> rejected,
           ) {
-        return Draggable<int>(
-          // Data is the value this Draggable stores.
-          data: 1,
-          child: SizedBox(
-            height: 100,
-            width: 100,
-            child: Image.asset("assets/queen.png"),
-          ),
-          feedback: SizedBox(
-            height: 100,
-            width: 100,
-            child: Image.asset("assets/queen.png"),
-          ),
-          childWhenDragging: Container(),
-        );
+
+        if (figure == null) {
+          return const SizedBox(
+            width: 40,
+            height: 41
+          );
+        }
+
+        return figureWidget(context, figure);
       },
+      onAccept: (Figure acceptedFigure) {
+        Desk.move(acceptedFigure.row, acceptedFigure.col, row, col);
+
+        setState(() {
+          setBoard();
+        });
+      },
+    );
+  }
+
+  Widget figureWidget(BuildContext context, Figure figure) {
+    var figureImages = {
+      'p': 'pawn.svg',
+      'r': 'rook.svg',
+      'n': 'knight.svg',
+      'b': 'bishop.svg',
+      'k': 'king.svg',
+      'q': 'queen.svg',
+    };
+
+    var image = 'assets/' + (figureImages[figure.symbol] ?? '');
+    var color = figure.color == 'w' ? Colors.white : Colors.black;
+
+    return Draggable<Figure>(
+      data: figure,
+      child: SizedBox(
+        width: 40,
+        height: 41,
+        child: SvgPicture.asset(image, color: color),
+      ),
+      feedback: SizedBox(
+        child: SvgPicture.asset(image, color: color),
+      ),
+      childWhenDragging: Container(),
     );
   }
 }
